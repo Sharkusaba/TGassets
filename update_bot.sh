@@ -6,6 +6,9 @@ echo "======================================="
 echo "Starting TGhelper bot update process..."
 echo "======================================="
 
+# Set full PATH for all commands
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+
 # Go to bot directory
 cd /bots/TGhelper || {
     echo "ERROR: Cannot change directory to /bots/TGhelper"
@@ -14,7 +17,13 @@ cd /bots/TGhelper || {
 
 # Stop the bot service
 echo "1. Stopping bot service..."
-sudo systemctl stop tg-helper-bot
+if systemctl list-unit-files | grep -q "tg-helper-bot.service"; then
+    systemctl stop tg-helper-bot
+    echo "   Bot service stopped"
+else
+    echo "   WARNING: tg-helper-bot.service not found, stopping process directly"
+fi
+
 sleep 2
 
 # Check if process stopped
@@ -52,11 +61,11 @@ fi
 
 # Restore .env if it was overwritten
 echo "4. Ensuring .env file is intact..."
-if [ ! -f .env ] && [ -f .env.backup.* ]; then
+if [ ! -f .env ] && ls .env.backup.* >/dev/null 2>&1; then
     latest_backup=$(ls -t .env.backup.* | head -1)
     cp "$latest_backup" .env
     echo "   .env restored from backup"
-elif [ -f .env.backup.* ] && [ -f .env ]; then
+elif ls .env.backup.* >/dev/null 2>&1 && [ -f .env ]; then
     # Compare if .env was changed during pull
     latest_backup=$(ls -t .env.backup.* | head -1)
     if ! cmp -s .env "$latest_backup"; then
@@ -78,26 +87,28 @@ fi
 
 # Start the bot service
 echo "6. Starting bot service..."
-sudo systemctl start tg-helper-bot
+systemctl start tg-helper-bot
 sleep 3
 
 # Check if bot started successfully
 echo "7. Verifying bot status..."
-if sudo systemctl is-active --quiet tg-helper-bot; then
+if systemctl is-active --quiet tg-helper-bot; then
     echo "   SUCCESS: Bot service is running"
 else
     echo "   ERROR: Bot service failed to start"
     echo "   Checking logs..."
-    sudo journalctl -u tg-helper-bot -n 10 --no-pager
+    journalctl -u tg-helper-bot -n 10 --no-pager
     exit 1
 fi
 
 # Clean up old backups (keep last 5)
 echo "8. Cleaning up old backups..."
-ls -t .env.backup.* 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null
+if ls .env.backup.* >/dev/null 2>&1; then
+    ls -t .env.backup.* 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null
+fi
 
 echo "======================================="
 echo "Update process completed!"
 echo "Bot should be running with latest code."
-echo "Check logs: sudo journalctl -u tg-helper-bot -f"
+echo "Check logs: journalctl -u tg-helper-bot -f"
 echo "======================================="
