@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 GitHub Webhook Listener for TGhelper bot
-Listens on port 5001 for GitHub webhook notifications
+Listens on port 5355 for GitHub webhook notifications
 """
 
 import os
@@ -167,6 +167,6 @@ if __name__ == '__main__':
     # Add GITHUB_WEBHOOK_SECRET to your .env file
     app.run(
         host='0.0.0.0',
-        port=5001,
+        port=5355,
         debug=False
     )
